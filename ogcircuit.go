@@ -12,20 +12,29 @@ import (
 )
 
 type Circuit struct {
-	// Your circuit inputs go here.
-	X frontend.Variable
-	Y frontend.Variable `gnark:",public"`
+	To              [25]frontend.Variable `gnark:",public"`
+	From            [25]frontend.Variable `gnark:",public"`
+	Amount          [25]frontend.Variable
+	TransactionHash [25]frontend.Variable `gnark:",public"`
+	FromBalances    [25]frontend.Variable
+	ToBalances      [25]frontend.Variable
 }
 
 func (circuit *Circuit) Define(api frontend.API) error {
-	// Your circuit logic goes here.
-	api.AssertIsEqual(circuit.X, circuit.Y)
+	for i := 0; i < 25; i++ {
+		api.AssertIsLessOrEqual(circuit.Amount[i], circuit.FromBalances[i])
+
+		updatedFromBalance := api.Sub(circuit.FromBalances[i], circuit.Amount[i])
+		updatedToBalance := api.Add(circuit.ToBalances[i], circuit.Amount[i])
+
+		api.AssertIsEqual(updatedFromBalance, api.Sub(circuit.FromBalances[i], circuit.Amount[i]))
+		api.AssertIsEqual(updatedToBalance, api.Add(circuit.ToBalances[i], circuit.Amount[i]))
+	}
 	return nil
 }
 
 // Common utility for reading JSON in from a file.
 func ReadFromInputPath(pathInput string) (map[string]interface{}, error) {
-
 	absPath, err := filepath.Abs(pathInput)
 	if err != nil {
 		fmt.Println("Error constructing absolute path:", err)
@@ -49,20 +58,32 @@ func ReadFromInputPath(pathInput string) (map[string]interface{}, error) {
 
 // Construct a witness from input data in a JSON file.
 func FromJson(pathInput string) witness.Witness {
-
 	data, err := ReadFromInputPath(pathInput)
 	if err != nil {
 		panic(err)
 	}
 
-	// Your witness construction logic goes here.
-	X := frontend.Variable(data["X"])
-	Y := frontend.Variable(data["Y"])
-	assignment := Circuit{
-		X: X,
-		Y: Y,
+	// Extract arrays from JSON data
+	toArray := data["to"].([]interface{})
+	fromArray := data["from"].([]interface{})
+	amountArray := data["amount"].([]interface{})
+	transactionHashArray := data["transactionHash"].([]interface{})
+	fromBalancesArray := data["fromBalances"].([]interface{})
+	toBalancesArray := data["toBalances"].([]interface{})
+
+	// Initialize the Circuit struct with array values
+	var circuit Circuit
+	for i := 0; i < 25; i++ {
+		circuit.To[i] = frontend.Variable(toArray[i])
+		circuit.From[i] = frontend.Variable(fromArray[i])
+		circuit.Amount[i] = frontend.Variable(amountArray[i])
+		circuit.TransactionHash[i] = frontend.Variable(transactionHashArray[i])
+		circuit.FromBalances[i] = frontend.Variable(fromBalancesArray[i])
+		circuit.ToBalances[i] = frontend.Variable(toBalancesArray[i])
 	}
-	w, err := frontend.NewWitness(&assignment, ecc.BLS12_381.ScalarField())
+
+	// Create the witness
+	w, err := frontend.NewWitness(&circuit, ecc.BLS12_381.ScalarField())
 	if err != nil {
 		panic(err)
 	}
