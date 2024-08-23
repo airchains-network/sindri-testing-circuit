@@ -1,0 +1,10 @@
+{
+  "$schema": "https://sindri.app/api/v1/sindri-manifest-schema.json",
+  "name": "og-circuit",
+  "circuitStructName": "Circuit",
+  "circuitType": "gnark",
+  "curve": "bls12-381",
+  "gnarkVersion": "v0.10.0",
+  "packageName": "ogcircuit",
+  "provingScheme": "groth16"
+}
