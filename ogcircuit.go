@@ -20,6 +20,7 @@ type Circuit struct {
 	ToBalances      [25]frontend.Variable
 }
 
+// Define checks and updates balances for each circuit element.
 func (circuit *Circuit) Define(api frontend.API) error {
 	for i := 0; i < 25; i++ {
 		api.AssertIsLessOrEqual(circuit.Amount[i], circuit.FromBalances[i])
